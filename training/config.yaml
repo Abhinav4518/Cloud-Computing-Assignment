@@ -1,0 +1,10 @@
+seed: 42
+learning_rate: 0.0005
+batch_size: 8
+epochs: 4
+max_seq_length: 128
+model_version: "v1"
+library_versions:
+  torch: "2.3.1+cpu"
+  transformers: "4.41.2"
+  datasets: "2.19.1"
