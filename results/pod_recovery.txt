@@ -1,0 +1,4 @@
+pod "command-parser-756777484-6zrlk" deleted
+pod/command-parser-856dd84c6c-kz2jm condition met
+NAME                              READY   STATUS    RESTARTS   AGE   IP           NODE                       NOMINATED NODE   READINESS GATES
+command-parser-856dd84c6c-kz2jm   1/1     Running   0          7s    10.42.0.51   k3d-cloud-assgn-server-0   <none>           <none>

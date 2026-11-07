@@ -1,0 +1,2 @@
+NAME                              CPU(cores)   MEMORY(bytes)   
+command-parser-856dd84c6c-nx5tg   1502m        858Mi           
