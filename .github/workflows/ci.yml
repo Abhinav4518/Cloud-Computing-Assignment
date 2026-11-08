@@ -1,0 +1,60 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      use_bad_model:
+        description: "Set to 'true' to evaluate untrained Pythia-70M and demonstrate quality gate failure"
+        required: false
+        default: "false"
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Stage 1 - Linting
+        run: ruff check service/ worker/ training/ tests/
+
+      - name: Stage 2 - Unit Tests
+        run: SKIP_MODEL_LOAD=1 pytest tests/ -v
+
+      - name: Stage 3 - Download Model Release Asset & Evaluate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          USE_BAD_MODEL: ${{ github.event.inputs.use_bad_model }}
+        run: |
+          mkdir -p artifacts/models/v1 results
+          if [ "$USE_BAD_MODEL" = "true" ]; then
+            echo "Running evaluation with untrained EleutherAI/pythia-70m to test Quality Gate failure..."
+            python -c "from training.evaluate_all import eval_hf_model; import json; recs=[json.loads(l) for l in open('data/validation.jsonl')]; eval_hf_model('EleutherAI/pythia-70m', recs, 'results/ci_preds.jsonl')"
+          else
+            gh release download v1.0.0 --pattern "model-v1.tar.gz" --dir /tmp
+            tar -xzf /tmp/model-v1.tar.gz -C artifacts/models/v1
+            python -c "from training.evaluate_all import eval_hf_model; import json; recs=[json.loads(l) for l in open('data/validation.jsonl')]; eval_hf_model('artifacts/models/v1', recs, 'results/ci_preds.jsonl')"
+          fi
+          python tools/score.py results/ci_preds.jsonl data/validation.jsonl --out results/ci_score.json
+
+      - name: Stage 4 - Quality Gate
+        run: python tools/score.py results/ci_preds.jsonl data/validation.jsonl --min-validity 95
+
+      - name: Stage 5 - Gitleaks Secret Scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
