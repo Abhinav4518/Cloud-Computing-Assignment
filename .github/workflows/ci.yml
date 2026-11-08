@@ -33,7 +33,7 @@ jobs:
         run: ruff check service/ worker/ training/ tests/
 
       - name: Stage 2 - Unit Tests
-        run: SKIP_MODEL_LOAD=1 pytest tests/ -v
+        run: PYTHONPATH=. SKIP_MODEL_LOAD=1 pytest tests/ -v
 
       - name: Stage 3 - Download Model Release Asset & Evaluate
         env:
